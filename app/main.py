@@ -8,8 +8,6 @@ from app.database import engine
 
 from app.models import Base
 
-Base.metadata.create_all(bind=engine)
-
 app = FastAPI( title="Реестр сотрудников")
 
 app.include_router(employees.router)
