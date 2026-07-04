@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="flex justify-center items-center min-h-screen">
+    <div class="w-full max-w-2xl">
+        <h1 class="text-2xl font-bold mb-3 text-center">
+            {% if employee %}Редактировать{% else %}Добавить{% endif %} сотрудника
+        </h1>
+
+        {% if error %}
+        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded mb-3 text-sm">
+            {{ error }}
+        </div>
+        {% endif %}
+
+        <form method="post" action="{{ action }}" enctype="multipart/form-data" class="bg-white p-5 rounded-lg shadow-md">
+            <!-- Фамилия -->
+            <div class="mb-3">
+                <label class="block text-sm font-medium mb-1">Фамилия *</label>
+                <input name="last_name" type="text" value="{{ employee.last_name if employee else '' }}" required
+                       class="w-full border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+
+            <!-- Имя -->
+            <div class="mb-3">
+                <label class="block text-sm font-medium mb-1">Имя *</label>
+                <input name="first_name" type="text" value="{{ employee.first_name if employee else '' }}" required
+                       class="w-full border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+
+            <!-- Отчество -->
+            <div class="mb-3">
+                <label class="block text-sm font-medium mb-1">Отчество</label>
+                <input name="middle_name" type="text" value="{{ employee.middle_name or '' }}"
+                       class="w-full border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+
+            <!-- Дата рождения -->
+            <div class="mb-3">
+                <label class="block text-sm font-medium mb-1">Дата рождения *</label>
+                <input name="birth_date" type="date"
+                       value="{{ employee.birth_date.strftime('%Y-%m-%d') if employee and employee.birth_date else '' }}"
+                       required
+                       class="w-full border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+
+            <!-- Пол -->
+            <div class="mb-3">
+                <label class="block text-sm font-medium mb-1">Пол *</label>
+                <select name="gender" required
+                        class="w-full border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="">Выберите...</option>
+                    <option value="M" {% if employee and employee.gender == 'M' %}selected{% endif %}>Мужской</option>
+                    <option value="F" {% if employee and employee.gender == 'F' %}selected{% endif %}>Женский</option>
+                </select>
+            </div>
+
+            <!-- Телефон -->
+            <div class="mb-3">
+                <label class="block text-sm font-medium mb-1">Телефон</label>
+                <input name="phone" type="tel" value="{{ employee.phone or '' }}"
+                       placeholder="+7 (999) 999-99-99"
+                       class="w-full border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+
+            <!-- Фото -->
+            <div class="mb-3">
+                <label class="block text-sm font-medium mb-1">Фото (макс. {{ MAX_PHOTO_SIZE_KB }} КБ, JPG/PNG)</label>
+                <input name="photo" type="file" accept="image/jpeg,image/png"
+                       class="w-full text-sm border border-gray-300 rounded px-3 py-1.5 file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                {% if employee and employee.photo %}
+                <div class="mt-1 flex items-center space-x-2">
+                    <img src="/static/uploads/{{ employee.photo }}" class="w-12 h-12 object-cover rounded-full border">
+                    <span class="text-xs text-gray-600">Текущее фото</span>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Кнопки -->
+            <div class="mt-4 flex justify-between items-center border-t pt-3">
+                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-1.5 rounded text-sm transition duration-200">
+                    Сохранить
+                </button>
+                <a href="/" class="text-sm text-gray-600 hover:text-gray-800 hover:underline"
+                   onclick="return confirm('Изменения не сохранены. Продолжить?')">
+                    Отменить
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
