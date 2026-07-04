@@ -1,8 +1,11 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
+from sqlalchemy import or_, select
 from datetime import date, timedelta
 
+from app.models import Employee
+
 from app import models, schemas
+
 
 def get_employee(db: Session, employee_id: int):
     return db.query(models.Employee).filter(models.Employee.id == employee_id).first()
@@ -60,7 +63,7 @@ def count_employees(db: Session, search: str = "", gender: list[str] = None, age
     return query.count()
 
 def create_employee(db: Session, employee: schemas.EmployeeCreate):
-    db_employee = models.Employee(**employee.dict())
+    db_employee = models.Employee(**employee.model_dump())
     db.add(db_employee)
     db.commit()
     db.refresh(db_employee)
@@ -69,7 +72,7 @@ def create_employee(db: Session, employee: schemas.EmployeeCreate):
 def update_employee(db: Session, employee_id: int, employee_data: schemas.EmployeeUpdate):
     db_employee = get_employee(db, employee_id)
     if db_employee:
-        for key, value in employee_data.dict(exclude_unset=True).items():
+        for key, value in employee_data.model_dump(exclude_unset=True).items():
             setattr(db_employee, key, value)
         db.commit()
         db.refresh(db_employee)
