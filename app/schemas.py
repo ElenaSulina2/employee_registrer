@@ -27,6 +27,7 @@ class Employee(EmployeeBase):
     id: int
     model_config = ConfigDict(from_attributes=True)
 
+    @computed_field
     @property
     def age(self) -> int:
         return calculate_age(self.birth_date)
@@ -36,12 +37,26 @@ class EmployeeSearchParams(BaseModel):
     search: str = Field(default="", description="Поиск по ФИО")
     gender_male: bool = Field(default=False, description="Фильтр по мужскому полу")
     gender_female: bool = Field(default=False, description="Фильтр по женскому полу")
-    age_from: Optional[int] = Field(default=None, ge=0, description="Возраст от")
-    age_to: Optional[int] = Field(default=None, ge=0, description="Возраст до")
+    age_from: Optional[str] = Field(default=None, description="Возраст от (строка)")
+    age_to: Optional[str] = Field(default=None, description="Возраст до (строка)")
     page: int = Field(default=1, ge=1, description="Номер страницы")
-    size: int = Field(
-        default=10, ge=1, le=100, description="Количество записей на странице"
-    )
+    size: int = Field(default=10, ge=1, le=100, description="Количество записей на странице")
+
+    def get_age_from_int(self) -> Optional[int]:
+        if self.age_from and self.age_from.strip():
+            try:
+                return int(self.age_from)
+            except ValueError:
+                return None
+        return None
+
+    def get_age_to_int(self) -> Optional[int]:
+        if self.age_to and self.age_to.strip():
+            try:
+                return int(self.age_to)
+            except ValueError:
+                return None
+        return None
 
 
 class EmployeeFormData(BaseModel):
@@ -92,15 +107,13 @@ class IndexPageContext(BaseModel):
             search=params.search,
             gender_male=params.gender_male,
             gender_female=params.gender_female,
-            age_from=params.age_from,
-            age_to=params.age_to,
+            age_from=params.get_age_from_int(),
+            age_to=params.get_age_to_int(),
             MAX_PHOTO_SIZE_KB=max_photo_size_kb,
         )
 
     @staticmethod
-    def _get_page_range(
-        current_page: int, total_pages: int, max_display: int = 5
-    ) -> List[int]:
+    def _get_page_range(current_page: int, total_pages: int, max_display: int = 5) -> List[int]:
         if total_pages <= max_display:
             return list(range(1, total_pages + 1))
         half = max_display // 2
@@ -119,10 +132,12 @@ class IndexPageContext(BaseModel):
             parts.append("gender_male=true")
         if params.gender_female:
             parts.append("gender_female=true")
-        if params.age_from is not None:
-            parts.append(f"age_from={params.age_from}")
-        if params.age_to is not None:
-            parts.append(f"age_to={params.age_to}")
+        age_from = params.get_age_from_int()
+        if age_from is not None:
+            parts.append(f"age_from={age_from}")
+        age_to = params.get_age_to_int()
+        if age_to is not None:
+            parts.append(f"age_to={age_to}")
         return "&".join(parts)
 
     def to_template_dict(self) -> dict:

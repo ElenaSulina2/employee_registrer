@@ -3,7 +3,6 @@ from fastapi import UploadFile
 from sqlalchemy.orm import Session
 
 from app import crud, schemas
-from app.config import settings
 from app.utils.constants import MAX_PHOTO_SIZE_BYTES
 from app.utils.helpers import save_uploaded_photo, delete_photo
 from app.utils.validators import validate_and_parse_employee_data
@@ -32,15 +31,15 @@ class EmployeeService:
             limit=params.size,
             search=params.search,
             gender=gender,
-            age_from=params.age_from,
-            age_to=params.age_to,
+            age_from=params.get_age_from_int(),
+            age_to=params.get_age_to_int(),
         )
         total = crud.count_employees(
             self.db,
             search=params.search,
             gender=gender,
-            age_from=params.age_from,
-            age_to=params.age_to,
+            age_from=params.get_age_from_int(),
+            age_to=params.get_age_to_int(),
         )
         total_pages = (total + params.size - 1) // params.size
 
@@ -50,6 +49,10 @@ class EmployeeService:
     def process_employee_form(
         self, form_data: schemas.EmployeeFormData, photo: Optional[UploadFile] = None
     ) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+        """
+        Валидирует данные формы и обрабатывает фото.
+        Возвращает (validated_data, error_message).
+        """
         try:
             validated = validate_and_parse_employee_data(
                 form_data.last_name,
@@ -88,9 +91,8 @@ class EmployeeService:
         db_employee = crud.create_employee(self.db, employee_data)
         return schemas.Employee.model_validate(db_employee)
 
-    def update_employee(
-        self, employee_id: int, validated_data: dict
-    ) -> Optional[schemas.Employee]:
+    def update_employee(self, employee_id: int, validated_data: dict) -> Optional[schemas.Employee]:
+        """Обновляет сотрудника без обработки фото (фото уже в validated_data)."""
         employee_data = schemas.EmployeeUpdate(
             last_name=validated_data["last_name"],
             first_name=validated_data["first_name"],
@@ -98,34 +100,12 @@ class EmployeeService:
             birth_date=validated_data["birth_date"],
             gender=validated_data["gender"],
             phone=validated_data["phone"],
-            photo=validated_data.get("photo"),
+            photo=validated_data.get("photo"),  # может быть None или новое имя
         )
         db_employee = crud.update_employee(self.db, employee_id, employee_data)
         if db_employee:
             return schemas.Employee.model_validate(db_employee)
         return None
-
-    def update_employee_with_photo(
-        self, employee_id: int, validated_data: dict, photo: Optional[UploadFile] = None
-    ) -> Tuple[Optional[schemas.Employee], Optional[str]]:
-        employee = self.get_employee(employee_id)
-        if not employee:
-            return None, "Сотрудник не найден"
-
-        if photo and photo.filename:
-            filename, err = save_uploaded_photo(photo, MAX_PHOTO_SIZE_BYTES)
-            if err:
-                return None, err
-            if employee.photo:
-                delete_photo(employee.photo)
-            validated_data["photo"] = filename
-        else:
-            validated_data["photo"] = employee.photo
-
-        updated_employee = self.update_employee(employee_id, validated_data)
-        if not updated_employee:
-            return None, "Не удалось обновить сотрудника"
-        return updated_employee, None
 
     def delete_employee(self, employee_id: int) -> bool:
         employee = crud.get_employee(self.db, employee_id)
