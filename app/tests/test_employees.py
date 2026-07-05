@@ -27,9 +27,7 @@ def test_create_employee(client, db_session):
         "gender": "M",
         "phone": "+7 (999) 123-45-67",
     }
-    response = client.post(
-        "/add", data=data, files={}, follow_redirects=False
-    )
+    response = client.post("/add", data=data, files={}, follow_redirects=False)
     assert response.status_code == 303, f"Ошибка: {response.text}"
     assert response.headers["location"] == "/"
 
@@ -168,3 +166,60 @@ def test_edit_nonexistent_employee(client):
 
     response = client.post("/delete/99999")
     assert response.status_code == 404
+
+
+def test_pagination(client, db_session):
+    """Проверка пагинации и изменения размера страницы."""
+
+    for i in range(25):
+        data = {
+            "last_name": f"Фамилия{i}",
+            "first_name": f"Имя{i}",
+            "birth_date": "1990-01-01",
+            "gender": "M" if i % 2 == 0 else "F",
+        }
+        client.post("/add", data=data, files={})
+
+    response = client.get("/")
+    assert response.status_code == 200
+
+    for i in range(10):
+        assert f"Фамилия{i}" in response.text
+    assert "Фамилия10" not in response.text
+    assert "Всего: 25" in response.text
+
+    assert "page=2" in response.text
+    assert "page=3" in response.text
+
+    response = client.get("/?page=2")
+    assert response.status_code == 200
+    for i in range(10, 20):
+        assert f"Фамилия{i}" in response.text
+    assert "Фамилия0" not in response.text
+    assert "Фамилия20" not in response.text
+
+    response = client.get("/?page=3")
+    assert response.status_code == 200
+    for i in range(20, 25):
+        assert f"Фамилия{i}" in response.text
+    assert "Фамилия0" not in response.text
+
+    response = client.get("/?size=5")
+    assert response.status_code == 200
+    for i in range(5):
+        assert f"Фамилия{i}" in response.text
+    assert "Фамилия5" not in response.text
+    assert "Всего: 25" in response.text
+    assert "page=5" in response.text
+
+    response = client.get("/?search=Фамилия1&size=5")
+    assert response.status_code == 200
+
+    assert "Фамилия1" in response.text
+    assert "Фамилия10" in response.text
+    assert "Фамилия11" in response.text
+    assert "Фамилия12" in response.text
+    assert "Фамилия13" in response.text
+    assert "Фамилия14" not in response.text
+    assert "Всего: 11" in response.text
+    assert "page=3" in response.text
