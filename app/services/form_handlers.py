@@ -42,11 +42,21 @@ def handle_employee_form(
         action = f"/add" if employee_id is None else f"/edit/{employee_id}"
         return render_form_error(request, error, employee=employee, action=action)
 
+    if validated is None:
+        action = f"/add" if employee_id is None else f"/edit/{employee_id}"
+        return render_form_error(
+            request, "Неизвестная ошибка валидации", employee=employee, action=action
+        )
+
     if employee_id is None:
         service.create_employee(validated)
     else:
-        updated, error = service.update_employee_with_photo(employee_id, validated, photo)
+        updated, error = service.update_employee_with_photo(
+            employee_id, validated, photo
+        )
         if error:
-            return render_form_error(request, error, employee=employee, action=f"/edit/{employee_id}")
+            return render_form_error(
+                request, error, employee=employee, action=f"/edit/{employee_id}"
+            )
 
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)

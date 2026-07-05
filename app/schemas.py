@@ -27,7 +27,6 @@ class Employee(EmployeeBase):
     id: int
     model_config = ConfigDict(from_attributes=True)
 
-    @computed_field
     @property
     def age(self) -> int:
         return calculate_age(self.birth_date)
@@ -40,7 +39,9 @@ class EmployeeSearchParams(BaseModel):
     age_from: Optional[int] = Field(default=None, ge=0, description="Возраст от")
     age_to: Optional[int] = Field(default=None, ge=0, description="Возраст до")
     page: int = Field(default=1, ge=1, description="Номер страницы")
-    size: int = Field(default=10, ge=1, le=100, description="Количество записей на странице")
+    size: int = Field(
+        default=10, ge=1, le=100, description="Количество записей на странице"
+    )
 
 
 class EmployeeFormData(BaseModel):
@@ -59,7 +60,7 @@ class IndexPageContext(BaseModel):
     total: int
     total_pages: int
     page_range: List[int]
-    base_query: str 
+    base_query: str
     search: str
     gender_male: bool
     gender_female: bool
@@ -97,7 +98,9 @@ class IndexPageContext(BaseModel):
         )
 
     @staticmethod
-    def _get_page_range(current_page: int, total_pages: int, max_display: int = 5) -> List[int]:
+    def _get_page_range(
+        current_page: int, total_pages: int, max_display: int = 5
+    ) -> List[int]:
         if total_pages <= max_display:
             return list(range(1, total_pages + 1))
         half = max_display // 2

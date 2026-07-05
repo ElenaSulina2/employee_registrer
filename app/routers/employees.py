@@ -5,10 +5,15 @@ from app.schemas import EmployeeSearchParams, IndexPageContext, EmployeeFormData
 from app.config import settings
 from app.template_engine import templates
 from app.services.employee_service import EmployeeService
-from app.dependencies import get_employee_form, handle_employee_form, get_employee_service
+from app.dependencies import (
+    get_employee_form,
+    handle_employee_form,
+    get_employee_service,
+)
 from app.utils.template_utils import render_add_edit_page
 
 router = APIRouter()
+
 
 @router.get("/", response_class=HTMLResponse)
 def index(
@@ -54,7 +59,9 @@ def edit_form(
     employee = service.get_employee(employee_id)
     if not employee:
         raise HTTPException(status_code=404, detail="Сотрудник не найден")
-    return render_add_edit_page(request, employee=employee, action=f"/edit/{employee_id}")
+    return render_add_edit_page(
+        request, employee=employee, action=f"/edit/{employee_id}"
+    )
 
 
 @router.post("/edit/{employee_id}")

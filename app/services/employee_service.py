@@ -1,4 +1,4 @@
-from typing import List, Tuple, Optional
+from typing import Any, Dict, List, Tuple, Optional
 from fastapi import UploadFile
 from sqlalchemy.orm import Session
 
@@ -49,7 +49,7 @@ class EmployeeService:
 
     def process_employee_form(
         self, form_data: schemas.EmployeeFormData, photo: Optional[UploadFile] = None
-    ) -> Tuple[Optional[dict], Optional[str]]:
+    ) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
         try:
             validated = validate_and_parse_employee_data(
                 form_data.last_name,

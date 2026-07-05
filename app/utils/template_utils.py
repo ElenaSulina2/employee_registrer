@@ -11,11 +11,13 @@ def render_add_edit_page(request: Request, employee=None, action: str = "/add"):
             "employee": employee,
             "action": action,
             "MAX_PHOTO_SIZE_KB": settings.MAX_PHOTO_SIZE_KB,
-        }
+        },
     )
 
 
-def render_form_error(request: Request, error: str, employee=None, action: str = "/add"):
+def render_form_error(
+    request: Request, error: str, employee=None, action: str = "/add"
+):
     return templates.TemplateResponse(
         request,
         "add_edit.html",
@@ -24,5 +26,5 @@ def render_form_error(request: Request, error: str, employee=None, action: str =
             "action": action,
             "error": error,
             "MAX_PHOTO_SIZE_KB": settings.MAX_PHOTO_SIZE_KB,
-        }
+        },
     )

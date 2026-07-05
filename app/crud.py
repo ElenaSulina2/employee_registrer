@@ -1,3 +1,5 @@
+from typing import Optional
+
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from datetime import date, timedelta
@@ -9,9 +11,9 @@ from app import schemas
 def _apply_filters(
     query,
     search: str = "",
-    gender: list[str] = None,
-    age_from: int = None,
-    age_to: int = None,
+    gender: Optional[list[str]] = None,
+    age_from: Optional[int] = None,
+    age_to: Optional[int] = None,
 ):
     """Применяет фильтры к запросу (общая логика)."""
     if search:
@@ -47,9 +49,9 @@ def get_employees(
     skip: int = 0,
     limit: int = 10,
     search: str = "",
-    gender: list[str] = None,
-    age_from: int = None,
-    age_to: int = None,
+    gender: Optional[list[str]] = None,
+    age_from: Optional[int] = None,
+    age_to: Optional[int] = None,
 ):
     query = db.query(Employee)
     query = _apply_filters(query, search, gender, age_from, age_to)
@@ -59,9 +61,9 @@ def get_employees(
 def count_employees(
     db: Session,
     search: str = "",
-    gender: list[str] = None,
-    age_from: int = None,
-    age_to: int = None,
+    gender: Optional[list[str]] = None,
+    age_from: Optional[int] = None,
+    age_to: Optional[int] = None,
 ):
     query = db.query(Employee)
     query = _apply_filters(query, search, gender, age_from, age_to)

@@ -1,5 +1,5 @@
 from typing import Optional
-from fastapi import Depends, Form, UploadFile, Request, HTTPException, status
+from fastapi import Form, UploadFile, Request, HTTPException, status, Depends
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
@@ -10,6 +10,7 @@ from app.utils.template_utils import render_form_error
 
 
 def get_employee_service(db: Session = Depends(get_db)) -> EmployeeService:
+    """Возвращает экземпляр EmployeeService с текущей сессией БД."""
     return EmployeeService(db)
 
 
@@ -21,7 +22,7 @@ def get_employee_form(
     gender: str = Form(...),
     phone: Optional[str] = Form(None),
 ) -> EmployeeFormData:
-    """Зависимость для парсинга формы создания/редактирования сотрудника."""
+    """Парсит поля формы и возвращает модель EmployeeFormData."""
     return EmployeeFormData(
         last_name=last_name,
         first_name=first_name,
@@ -39,10 +40,7 @@ def handle_employee_form(
     service: EmployeeService,
     employee_id: Optional[int] = None,
 ):
-    """
-    Общая логика обработки формы: валидация, создание/обновление, обработка фото.
-    Возвращает либо RedirectResponse, либо TemplateResponse с ошибкой.
-    """
+    """Обрабатывает форму добавления/редактирования сотрудника."""
     employee = None
     if employee_id is not None:
         employee = service.get_employee(employee_id)
@@ -50,15 +48,25 @@ def handle_employee_form(
             raise HTTPException(status_code=404, detail="Сотрудник не найден")
 
     validated, error = service.process_employee_form(form_data, photo)
+
     if error:
         action = f"/add" if employee_id is None else f"/edit/{employee_id}"
         return render_form_error(request, error, employee=employee, action=action)
 
+    if validated is None:
+        return render_form_error(
+            request, "Неизвестная ошибка валидации", employee=employee, action="/add"
+        )
+
     if employee_id is None:
         service.create_employee(validated)
     else:
-        updated, error = service.update_employee_with_photo(employee_id, validated, photo)
+        updated, error = service.update_employee_with_photo(
+            employee_id, validated, photo
+        )
         if error:
-            return render_form_error(request, error, employee=employee, action=f"/edit/{employee_id}")
+            return render_form_error(
+                request, error, employee=employee, action=f"/edit/{employee_id}"
+            )
 
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
