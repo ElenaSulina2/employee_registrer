@@ -36,46 +36,53 @@
    git clone https://github.com/your-username/employee-registry.git
    cd employee-registry
 
-Создайте и активируйте виртуальное окружение:
+2. Создайте и активируйте виртуальное окружение:
 
-python -m venv venv
-source venv/bin/activate   # Linux/macOS
-venv\Scripts\activate      # Windows
-Установите зависимости:
+    ```bash
+    python -m venv venv
+    source venv/bin/activate   # Linux/macOS
+    venv\Scripts\activate      # Windows
 
 
-pip install -r requirements.txt
-Создайте файл .env в корне проекта:
+3. Установите зависимости:
 
-env
-DATABASE_URL=postgresql://user:password@localhost:5432/employee_db
-MAX_PHOTO_SIZE_KB=200
+    ```bash
+    pip install -r requirements.txt
 
-Примените миграции Alembic:
+4. Создайте файл .env в корне проекта:
+    ```bash
+    env
+    DATABASE_URL=postgresql://user:password@localhost:5432/employee_db
+    MAX_PHOTO_SIZE_KB=200
 
-alembic upgrade head
+5. Примените миграции Alembic:
+    ```bash
+    alembic upgrade head
 
-Запустите приложение:
+6. Запустите приложение:
 
-uvicorn app.main:app --reload
-Откройте в браузере: http://localhost:8000
+    ```bash
+    uvicorn app.main:app --reload
+    Откройте в браузере: http://localhost:8000
 
-Запуск через Docker (рекомендуемый способ):
+### Запуск через Docker (рекомендуемый способ):
 
-Убедитесь, что установлены Docker и Docker Compose.
+1. Убедитесь, что установлены Docker и Docker Compose.
 
-Соберите и запустите контейнеры:
+2. Соберите и запустите контейнеры:
 
-docker-compose up --build
-Приложение будет доступно по адресу: http://localhost:8000
+    ```bash
+    docker-compose up --build
+    Приложение будет доступно по адресу: http://localhost:8000
 
-Для остановки:
+3. Для остановки:
 
-docker-compose down
+    ```bash
+    docker-compose down
 
-Для полной очистки (удаление томов с БД и загруженными фото):
-
-docker-compose down -v
+4. Для полной очистки (удаление томов с БД и загруженными фото):
+    ```bash
+    docker-compose down -v
 
 Тестирование
 Запуск тестов с покрытием:
