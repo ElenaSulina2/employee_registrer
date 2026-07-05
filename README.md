@@ -149,4 +149,4 @@ employee-registry/
 * Кеширование с помощью Redis.
 
 Лицензия
-MIT License 📄
+### MIT License 📄
