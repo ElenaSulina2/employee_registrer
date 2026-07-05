@@ -84,13 +84,13 @@
     ```bash
     docker-compose down -v
 
-Тестирование
-Запуск тестов с покрытием:
+## Тестирование
+### Запуск тестов с покрытием:
+    `bash pytest -v --cov=app`
 
-pytest -v --cov=app
+## Структура проекта
 
-Структура проекта
-
+```
 employee-registry/
 ├── app/
 │   ├── main.py
@@ -128,6 +128,7 @@ employee-registry/
 ├── docker-compose.yml
 ├── requirements.txt
 └── README.md
+```
 
 
 Примечания по разработке
