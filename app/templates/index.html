@@ -1,15 +1,17 @@
 {% extends "base.html" %}
+
 {% block content %}
 <h1 class="text-2xl font-bold mb-4 text-center">Реестр сотрудников</h1>
 <div class="flex justify-end mb-4">
     <a href="/add" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">+ Добавить сотрудника</a>
 </div>
 
+<!-- Форма поиска и фильтров -->
 <form method="get" class="mb-6 p-4 bg-white rounded shadow">
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div>
             <label class="block text-sm font-medium">Поиск (ФИО)</label>
-            <input type="text" name="search" value="{{ search }}" class="mt-1 block w-full border rounded">
+            <input type="text" name="search" value="{{ search }}" class="mt-1 block w-full border rounded px-3 py-1">
         </div>
         <div>
             <label class="block text-sm font-medium">Пол</label>
@@ -20,11 +22,11 @@
         </div>
         <div>
             <label class="block text-sm font-medium">Возраст (от)</label>
-            <input type="number" name="age_from" value="{{ age_from if age_from else '' }}" min="0" class="mt-1 block w-full border rounded">
+            <input type="number" name="age_from" value="{{ age_from if age_from is not none else '' }}" min="0" class="mt-1 block w-full border rounded px-3 py-1">
         </div>
         <div>
             <label class="block text-sm font-medium">Возраст (до)</label>
-            <input type="number" name="age_to" value="{{ age_to if age_to else '' }}" min="0" class="mt-1 block w-full border rounded">
+            <input type="number" name="age_to" value="{{ age_to if age_to is not none else '' }}" min="0" class="mt-1 block w-full border rounded px-3 py-1">
         </div>
     </div>
     <div class="mt-4">
@@ -33,6 +35,7 @@
     </div>
 </form>
 
+<!-- Таблица сотрудников -->
 <div class="bg-white rounded shadow overflow-x-auto">
     <table class="min-w-full">
         <thead class="bg-gray-200">
@@ -77,20 +80,54 @@
                     </form>
                 </td>
             </tr>
+            {% else %}
+            <tr>
+                <td colspan="7" class="py-4 text-center text-gray-500">Сотрудников не найдено</td>
+            </tr>
             {% endfor %}
         </tbody>
     </table>
 </div>
 
-<div class="mt-4 flex justify-between items-center">
+<!-- Пагинация и выбор размера -->
+<div class="mt-4 flex flex-wrap justify-between items-center gap-2">
     <div>Всего: {{ total }}</div>
-    <div class="space-x-2">
-        {% if page > 1 %}
-            <a href="?page={{ page - 1 }}&size={{ size }}&search={{ search }}&gender_male={{ gender_male }}&gender_female={{ gender_female }}&age_from={{ age_from }}&age_to={{ age_to }}" class="bg-blue-500 text-white px-3 py-1 rounded">Назад</a>
-        {% endif %}
-        {% if page < total_pages %}
-            <a href="?page={{ page + 1 }}&size={{ size }}&search={{ search }}&gender_male={{ gender_male }}&gender_female={{ gender_female }}&age_from={{ age_from }}&age_to={{ age_to }}" class="bg-blue-500 text-white px-3 py-1 rounded">Вперёд</a>
-        {% endif %}
+    <div class="flex items-center gap-2">
+        <!-- Форма выбора количества записей на странице -->
+        <form method="get" class="flex items-center gap-1">
+            <input type="hidden" name="page" value="1">
+            {% if search %}<input type="hidden" name="search" value="{{ search }}">{% endif %}
+            {% if gender_male %}<input type="hidden" name="gender_male" value="true">{% endif %}
+            {% if gender_female %}<input type="hidden" name="gender_female" value="true">{% endif %}
+            {% if age_from is not none %}<input type="hidden" name="age_from" value="{{ age_from }}">{% endif %}
+            {% if age_to is not none %}<input type="hidden" name="age_to" value="{{ age_to }}">{% endif %}
+            <select name="size" onchange="this.form.submit()" class="border rounded px-2 py-1 text-sm">
+                <option value="5" {% if size == 5 %}selected{% endif %}>5</option>
+                <option value="10" {% if size == 10 %}selected{% endif %}>10</option>
+                <option value="25" {% if size == 25 %}selected{% endif %}>25</option>
+                <option value="50" {% if size == 50 %}selected{% endif %}>50</option>
+            </select>
+        </form>
+
+        <!-- Навигация по страницам -->
+        <div class="flex space-x-1">
+            {% if page > 1 %}
+                <a href="?page=1&size={{ size }}&{{ base_query }}" class="px-3 py-1 border rounded hover:bg-gray-100">&lt;&lt;</a>
+                <a href="?page={{ page - 1 }}&size={{ size }}&{{ base_query }}" class="px-3 py-1 border rounded hover:bg-gray-100">&lt;</a>
+            {% endif %}
+
+            {% for p in page_range %}
+                <a href="?page={{ p }}&size={{ size }}&{{ base_query }}" 
+                   class="px-3 py-1 border rounded hover:bg-gray-100 {% if p == page %}bg-blue-500 text-white{% endif %}">
+                    {{ p }}
+                </a>
+            {% endfor %}
+
+            {% if page < total_pages %}
+                <a href="?page={{ page + 1 }}&size={{ size }}&{{ base_query }}" class="px-3 py-1 border rounded hover:bg-gray-100">&gt;</a>
+                <a href="?page={{ total_pages }}&size={{ size }}&{{ base_query }}" class="px-3 py-1 border rounded hover:bg-gray-100">&gt;&gt;</a>
+            {% endif %}
+        </div>
     </div>
 </div>
 {% endblock %}
