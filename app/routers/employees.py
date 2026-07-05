@@ -1,103 +1,48 @@
 from typing import Optional
-from fastapi import APIRouter, Depends, Request, Form, HTTPException, Query, UploadFile, File, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    Request,
+    HTTPException,
+    UploadFile,
+    File,
+    status,
+    Form,
+)
 from fastapi.responses import RedirectResponse, HTMLResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app import crud, schemas
+from app.schemas import EmployeeFormData, EmployeeSearchParams, IndexPageContext
 from app.config import settings
-from app.utils.constants import MAX_PHOTO_SIZE_BYTES, DEFAULT_PAGE, DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE
-from app.utils.helpers import calculate_age, save_uploaded_photo, delete_photo
-from app.utils.validators import validate_and_parse_employee_data
+from app.template_engine import templates
+from app.services.employee_service import EmployeeService
+from app.utils.template_utils import render_form_error
 
 router = APIRouter()
-templates = Jinja2Templates(directory="./app/templates")
+
+
+def get_employee_service(db: Session = Depends(get_db)) -> EmployeeService:
+    return EmployeeService(db)
 
 
 @router.get("/", response_class=HTMLResponse)
 def index(
     request: Request,
-    search: str = Query("", alias="search"),
-    gender_male: bool = Query(False),
-    gender_female: bool = Query(False),
-    age_from: Optional[str] = Query(None, alias="age_from"),
-    age_to: Optional[str] = Query(None, alias="age_to"),
-    page: int = Query(DEFAULT_PAGE, ge=1),
-    size: int = Query(DEFAULT_PAGE_SIZE, ge=1, le=MAX_PAGE_SIZE),
-    db: Session = Depends(get_db)
+    params: EmployeeSearchParams = Depends(),
+    service: EmployeeService = Depends(get_employee_service),
 ):
-    # Преобразование строк в целые числа
-    age_from_int = None
-    age_to_int = None
-    if age_from is not None and age_from.strip():
-        try:
-            age_from_int = int(age_from)
-        except ValueError:
-            pass
-    if age_to is not None and age_to.strip():
-        try:
-            age_to_int = int(age_to)
-        except ValueError:
-            pass
-
-    # Фильтр по полу
-    gender = []
-    if gender_male:
-        gender.append("M")
-    if gender_female:
-        gender.append("F")
-    if not gender:
-        gender = None
-
-    skip = (page - 1) * size
-    employees = crud.get_employees(
-        db,
-        skip=skip,
-        limit=size,
-        search=search,
-        gender=gender,
-        age_from=age_from_int,
-        age_to=age_to_int
+    employees, total, total_pages = service.get_employees_with_filters(params)
+    context = IndexPageContext.from_employees(
+        employees=employees,
+        total=total,
+        params=params,
+        max_photo_size_kb=settings.MAX_PHOTO_SIZE_KB,
     )
-    total = crud.count_employees(
-        db,
-        search=search,
-        gender=gender,
-        age_from=age_from_int,
-        age_to=age_to_int
-    )
-    total_pages = (total + size - 1) // size
-
-    employees_with_age = []
-    for emp in employees:
-        employees_with_age.append({
-            "id": emp.id,
-            "last_name": emp.last_name,
-            "first_name": emp.first_name,
-            "middle_name": emp.middle_name or "",  # защита от None
-            "birth_date": emp.birth_date,
-            "gender": emp.gender,
-            "phone": emp.phone or "",              # защита от None
-            "photo": emp.photo,
-            "age": calculate_age(emp.birth_date)
-        })
-
     return templates.TemplateResponse(
-        request, "index.html",
-        {
-            "employees": employees_with_age,
-            "page": page,
-            "size": size,
-            "total": total,
-            "total_pages": total_pages,
-            "search": search,
-            "gender_male": gender_male,
-            "gender_female": gender_female,
-            "age_from": age_from,
-            "age_to": age_to,
-            "MAX_PHOTO_SIZE_KB": settings.MAX_PHOTO_SIZE_KB
-        }
+        request,
+        "index.html",
+        context.to_template_dict(),
     )
 
 
@@ -110,8 +55,8 @@ def add_form(request: Request):
             "request": request,
             "employee": None,
             "action": "/add",
-            "MAX_PHOTO_SIZE_KB": settings.MAX_PHOTO_SIZE_KB
-        }
+            "MAX_PHOTO_SIZE_KB": settings.MAX_PHOTO_SIZE_KB,
+        },
     )
 
 
@@ -120,61 +65,35 @@ def add_employee(
     request: Request,
     last_name: str = Form(...),
     first_name: str = Form(...),
-    middle_name: str = Form(None),
+    middle_name: Optional[str] = Form(None),
     birth_date: str = Form(...),
     gender: str = Form(...),
-    phone: str = Form(None),
+    phone: Optional[str] = Form(None),
     photo: UploadFile = File(None),
-    db: Session = Depends(get_db)
+    service: EmployeeService = Depends(get_employee_service),
 ):
-    error = None
-    try:
-        validated = validate_and_parse_employee_data(
-            last_name, first_name, birth_date, gender, middle_name, phone
-        )
-    except ValueError as e:
-        error = str(e)
-
-    # Приводим необязательные строки к пустой строке (вместо None)
-    if not error:
-        validated["middle_name"] = validated.get("middle_name") or ""
-        validated["phone"] = validated.get("phone") or ""
-
-    photo_filename = None
-    if photo and photo.filename and not error:
-        filename, err = save_uploaded_photo(photo, MAX_PHOTO_SIZE_BYTES)
-        if err:
-            error = err
-        else:
-            photo_filename = filename
-
-    if error:
-        return templates.TemplateResponse(
-            "add_edit.html",
-            {
-                "employee": None,
-                "action": "/add",
-                "error": error,
-                "MAX_PHOTO_SIZE_KB": settings.MAX_PHOTO_SIZE_KB
-            }
-        )
-
-    employee_data = schemas.EmployeeCreate(
-        last_name=validated["last_name"],
-        first_name=validated["first_name"],
-        middle_name=validated["middle_name"],
-        birth_date=validated["birth_date"],
-        gender=validated["gender"],
-        phone=validated["phone"],
-        photo=photo_filename
+    form_data = EmployeeFormData(
+        last_name=last_name,
+        first_name=first_name,
+        middle_name=middle_name,
+        birth_date=birth_date,
+        gender=gender,
+        phone=phone,
     )
-    crud.create_employee(db, employee_data)
+    validated, error = service.process_employee_form(form_data, photo)
+    if error:
+        return render_form_error(request, error, action="/add")
+    service.create_employee(validated)
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
 
 
 @router.get("/edit/{employee_id}", response_class=HTMLResponse)
-def edit_form(request: Request, employee_id: int, db: Session = Depends(get_db)):
-    employee = crud.get_employee(db, employee_id)
+def edit_form(
+    request: Request,
+    employee_id: int,
+    service: EmployeeService = Depends(get_employee_service),
+):
+    employee = service.get_employee(employee_id)
     if not employee:
         raise HTTPException(status_code=404, detail="Сотрудник не найден")
     return templates.TemplateResponse(
@@ -183,8 +102,8 @@ def edit_form(request: Request, employee_id: int, db: Session = Depends(get_db))
         {
             "employee": employee,
             "action": f"/edit/{employee_id}",
-            "MAX_PHOTO_SIZE_KB": settings.MAX_PHOTO_SIZE_KB
-        }
+            "MAX_PHOTO_SIZE_KB": settings.MAX_PHOTO_SIZE_KB,
+        },
     )
 
 
@@ -194,70 +113,48 @@ def edit_employee(
     employee_id: int,
     last_name: str = Form(...),
     first_name: str = Form(...),
-    middle_name: str = Form(None),
+    middle_name: Optional[str] = Form(None),
     birth_date: str = Form(...),
     gender: str = Form(...),
-    phone: str = Form(None),
+    phone: Optional[str] = Form(None),
     photo: UploadFile = File(None),
-    db: Session = Depends(get_db)
+    service: EmployeeService = Depends(get_employee_service),
 ):
-    employee = crud.get_employee(db, employee_id)
+    employee = service.get_employee(employee_id)
     if not employee:
         raise HTTPException(status_code=404, detail="Сотрудник не найден")
 
-    error = None
-    try:
-        validated = validate_and_parse_employee_data(
-            last_name, first_name, birth_date, gender, middle_name, phone
-        )
-    except ValueError as e:
-        error = str(e)
-
-    # Приводим необязательные строки к пустой строке
-    if not error:
-        validated["middle_name"] = validated.get("middle_name") or ""
-        validated["phone"] = validated.get("phone") or ""
-
-    new_photo = employee.photo
-    if photo and photo.filename and not error:
-        filename, err = save_uploaded_photo(photo, MAX_PHOTO_SIZE_BYTES)
-        if err:
-            error = err
-        else:
-            delete_photo(employee.photo)
-            new_photo = filename
-
-    if error:
-        return templates.TemplateResponse(
-            request,
-            "add_edit.html",
-            {
-                "employee": employee,
-                "action": f"/edit/{employee_id}",
-                "error": error,
-                "MAX_PHOTO_SIZE_KB": settings.MAX_PHOTO_SIZE_KB
-            }
-        )
-
-    employee_data = schemas.EmployeeUpdate(
-        last_name=validated["last_name"],
-        first_name=validated["first_name"],
-        middle_name=validated["middle_name"],
-        birth_date=validated["birth_date"],
-        gender=validated["gender"],
-        phone=validated["phone"],
-        photo=new_photo
+    form_data = EmployeeFormData(
+        last_name=last_name,
+        first_name=first_name,
+        middle_name=middle_name,
+        birth_date=birth_date,
+        gender=gender,
+        phone=phone,
     )
-    crud.update_employee(db, employee_id, employee_data)
+    validated, error = service.process_employee_form(form_data)
+    if error:
+        return render_form_error(
+            request, error, employee=employee, action=f"/edit/{employee_id}"
+        )
+
+    updated_employee, error = service.update_employee_with_photo(
+        employee_id, validated, photo
+    )
+    if error:
+        return render_form_error(
+            request, error, employee=employee, action=f"/edit/{employee_id}"
+        )
+
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
 
 
 @router.post("/delete/{employee_id}")
-def delete_employee(employee_id: int, db: Session = Depends(get_db)):
-    employee = crud.get_employee(db, employee_id)
-    if employee:
-        delete_photo(employee.photo)
-    deleted = crud.delete_employee(db, employee_id)
+def delete_employee(
+    employee_id: int,
+    service: EmployeeService = Depends(get_employee_service),
+):
+    deleted = service.delete_employee(employee_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Сотрудник не найден")
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)

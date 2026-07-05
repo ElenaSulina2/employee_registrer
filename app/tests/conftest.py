@@ -1,5 +1,6 @@
 import os
-os.environ["DATABASE_URL"] = "sqlite:///:memory:"   # обязательно до импорта app
+
+os.environ["DATABASE_URL"] = "sqlite:///:memory:"
 
 import tempfile
 import pytest
@@ -16,14 +17,12 @@ TEST_UPLOAD_DIR = tempfile.mkdtemp()
 os.environ["UPLOAD_DIR"] = TEST_UPLOAD_DIR
 
 # Тестовая БД
-engine = create_engine(
-    "sqlite:///:memory:",
-    connect_args={"check_same_thread": False}
-)
+engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 # Создаём таблицы
 Base.metadata.create_all(bind=engine)
+
 
 @pytest.fixture(scope="function")
 def db_session():
@@ -35,14 +34,17 @@ def db_session():
     transaction.rollback()
     connection.close()
 
+
 @pytest.fixture(scope="function")
 def client(db_session):
     def override_get_db():
         yield db_session
+
     app.dependency_overrides[get_db] = override_get_db
     with TestClient(app) as test_client:
         yield test_client
     app.dependency_overrides.clear()
+
 
 @pytest.fixture(autouse=True)
 def clean_uploads():

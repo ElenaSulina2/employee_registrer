@@ -27,7 +27,9 @@ def test_create_employee(client, db_session):
         "gender": "M",
         "phone": "+7 (999) 123-45-67",
     }
-    response = client.post("/add", data=data, files={}, follow_redirects=False)  # важно: files={}
+    response = client.post(
+        "/add", data=data, files={}, follow_redirects=False
+    )  # важно: files={}
     assert response.status_code == 303, f"Ошибка: {response.text}"
     assert response.headers["location"] == "/"
 
@@ -44,14 +46,26 @@ def test_create_employee(client, db_session):
 
 def test_list_employees_with_filters(client, db_session):
     """Фильтрация по поиску, полу и возрасту."""
-    
+
     employees = [
-        {"last_name": "Смирнов", "first_name": "Алексей",
-         "birth_date": "1985-05-10", "gender": "M"},
-        {"last_name": "Кузнецова", "first_name": "Ольга",
-         "birth_date": "1995-08-20", "gender": "F"},
-        {"last_name": "Иванов", "first_name": "Сергей",
-         "birth_date": "2000-12-01", "gender": "M"},
+        {
+            "last_name": "Смирнов",
+            "first_name": "Алексей",
+            "birth_date": "1985-05-10",
+            "gender": "M",
+        },
+        {
+            "last_name": "Кузнецова",
+            "first_name": "Ольга",
+            "birth_date": "1995-08-20",
+            "gender": "F",
+        },
+        {
+            "last_name": "Иванов",
+            "first_name": "Сергей",
+            "birth_date": "2000-12-01",
+            "gender": "M",
+        },
     ]
     for emp in employees:
         client.post("/add", data=emp, files={})
@@ -101,7 +115,9 @@ def test_edit_employee(client, db_session):
         "gender": "M",
         "phone": "+7 (999) 111-22-33",
     }
-    response = client.post(f"/edit/{emp_id}", data=update_data, files={}, follow_redirects=False)
+    response = client.post(
+        f"/edit/{emp_id}", data=update_data, files={}, follow_redirects=False
+    )
     assert response.status_code == 303, f"Ошибка: {response.text}"
     assert response.headers["location"] == "/"
 
@@ -113,8 +129,12 @@ def test_edit_employee(client, db_session):
 
 def test_delete_employee(client, db_session):
     """Удаление сотрудника."""
-    data = {"last_name": "Удаляев", "first_name": "Удаляй",
-            "birth_date": "2000-01-01", "gender": "M"}
+    data = {
+        "last_name": "Удаляев",
+        "first_name": "Удаляй",
+        "birth_date": "2000-01-01",
+        "gender": "M",
+    }
     client.post("/add", data=data, files={})
     employee = db_session.query(Employee).filter_by(last_name="Удаляев").first()
     emp_id = employee.id
@@ -134,15 +154,15 @@ def test_edit_nonexistent_employee(client):
     assert "не найден" in response.text
 
     response = client.post(
-            "/edit/99999", 
-            data={
-                "last_name": "test",
-                "first_name": "test",
-                "birth_date": "1990-01-01",   # обязательно
-                "gender": "M",
-            }, 
-            files={}
-        )
+        "/edit/99999",
+        data={
+            "last_name": "test",
+            "first_name": "test",
+            "birth_date": "1990-01-01",
+            "gender": "M",
+        },
+        files={},
+    )
     assert response.status_code == 404
     assert "не найден" in response.text
 

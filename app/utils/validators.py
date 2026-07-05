@@ -2,10 +2,12 @@ from datetime import datetime, date
 from typing import Optional
 from app.utils.constants import GENDER_CHOICES, DATE_FORMAT
 
+
 def validate_gender(gender: str) -> str:
     if gender not in GENDER_CHOICES:
         raise ValueError("Неверное значение пола. Допустимы: M или F")
     return gender
+
 
 def parse_date(date_str: str) -> date:
     try:
@@ -13,13 +15,14 @@ def parse_date(date_str: str) -> date:
     except ValueError:
         raise ValueError(f"Неверный формат даты. Используйте {DATE_FORMAT}")
 
+
 def validate_and_parse_employee_data(
     last_name: str,
     first_name: str,
     birth_date: str,
     gender: str,
     middle_name: Optional[str] = None,
-    phone: Optional[str] = None
+    phone: Optional[str] = None,
 ) -> dict:
     if not last_name or not first_name:
         raise ValueError("Фамилия и Имя обязательны")
