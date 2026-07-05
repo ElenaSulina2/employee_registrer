@@ -1,7 +1,7 @@
 import os
 from app.config import settings
 
-UPLOAD_DIR = "app/static/uploads"
+UPLOAD_DIR = os.getenv("UPLOAD_DIR", "app/static/uploads")
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png"}
 MAX_PHOTO_SIZE_BYTES = settings.MAX_PHOTO_SIZE_KB * 1024
 
