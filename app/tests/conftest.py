@@ -20,7 +20,6 @@ os.environ["UPLOAD_DIR"] = TEST_UPLOAD_DIR
 engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Создаём таблицы
 Base.metadata.create_all(bind=engine)
 
 

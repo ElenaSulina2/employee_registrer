@@ -29,7 +29,7 @@ def test_create_employee(client, db_session):
     }
     response = client.post(
         "/add", data=data, files={}, follow_redirects=False
-    )  # важно: files={}
+    )
     assert response.status_code == 303, f"Ошибка: {response.text}"
     assert response.headers["location"] == "/"
 
