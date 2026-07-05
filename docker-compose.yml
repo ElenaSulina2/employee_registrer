@@ -19,5 +19,22 @@ services:
       timeout: 5s
       retries: 5
 
+  app:
+    build: .
+    container_name: employee_app
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://user:password@db:5432/employee_db
+      MAX_PHOTO_SIZE_KB: 200
+
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - uploads_data:/app/app/static/uploads
+    restart: unless-stopped
+
 volumes:
   postgres_data:
+  uploads_data:
